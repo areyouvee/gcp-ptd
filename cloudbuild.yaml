@@ -1,0 +1,31 @@
+substitutions:
+  _DEV_NAME: "unknown"
+  _PROJECT_ID: "changeme"
+
+steps:
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-t', 'gcr.io/${_PROJECT_ID}/sandbox-${_DEV_NAME}', '.']
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/${_PROJECT_ID}/sandbox-${_DEV_NAME}']
+
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        echo "Deploying Cloud Run service for dev: ${_DEV_NAME}"
+
+        gcloud run deploy "sandbox-${_DEV_NAME}-$(date +%s)" \
+          --image="gcr.io/${_PROJECT_ID}/sandbox-${_DEV_NAME}" \
+          --region=us-central1 \
+          --platform=managed \
+          --allow-unauthenticated \
+          --labels="owner=${_DEV_NAME},created_at=$(date +%Y%m%d)" \
+          --quiet
+
+        echo "Fetching service URL..."
+        gcloud run services list --filter="metadata.labels.owner=${_DEV_NAME}" \
+          --platform=managed \
+          --region=us-central1 \
+          --format="value(status.url)" | tail -1

@@ -1,0 +1,66 @@
+Deploy Clode Run Function:
+
+gcloud functions deploy cleanup_cloud_run \
+  --runtime=python310 \
+  --trigger-http \
+  --entry-point=cleanup_services \
+  --allow-unauthenticated \
+  --region=us-central1
+
+-----------------------------------------------
+
+
+Schedule Cloud Run with Cloud Scheduler:
+
+gcloud scheduler jobs create http run-cloudrun-cleanup \
+  --schedule="0 3 * * *" \
+  --uri="https://REGION-PROJECT_ID.cloudfunctions.net/cleanup_cloud_run" \
+  --http-method=GET \
+  --time-zone="America/New_York"
+
+
+------------------------------------------------
+
+DELETE ALL SANDBOX SERVICES:
+
+gcloud run services list \
+  --platform=managed \
+  --region=us-central1 \
+  --format="value(metadata.name)" \
+  | grep '^sandbox-' \
+  | xargs -I {} gcloud run services delete {} --platform=managed --region=us-central1 --quiet
+
+
+-------------------------------------------------
+
+GitHub-GCloud Push-to-Deploy Connector
+
+gcloud beta builds triggers create github \
+  --name="sandbox-deploy-trigger" \
+  --repo-name="<GITHUB_REPO_NAME>" \
+  --repo-owner="<GITHUB_USERNAME_OR_ORG>" \
+  --branch-pattern="^main$" \
+  --build-config="cloudbuild.yaml" \
+  --project="artful-wind-454818-r1"
+
+Notes:
+- GitHub account needs to be connected in Cloud build GitHub App
+- Authorized Cloud Build access to the repo
+
+
+--------------------------------------------------
+
+Java Devs Info:
+- Replace com.example.Main with actual fully qualified main class name
+- Keep file at root of the sandbox folder structure
+- Be sure to run 'mvn clean package' locally if you want to verify the JAR is being generated before zipping for deployment
+
+Folder Structure for Java Proj:
+sandbox-ruv/
+├── Dockerfile       -> Java specific Dockerfile
+├── cloudbuild.yaml  -> same across projects
+├── pom.xml          -> Java Maven build config
+└── src/
+    └── main/
+        └── java/
+            └── com/example/DemoApplication.java
