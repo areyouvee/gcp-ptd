@@ -23,6 +23,9 @@ gcloud scheduler jobs create http run-cloudrun-cleanup \
 
 DELETE ALL SANDBOX SERVICES:
 
+CMD Version:
+FOR /F "tokens=*" %i IN ('gcloud run services list --platform=managed --region=us-central1 --format="value(metadata.name)" ^| findstr "^sandbox-"') DO gcloud run services delete %i --platform=managed --region=us-central1 --quiet
+
 gcloud run services list \
   --platform=managed \
   --region=us-central1 \
